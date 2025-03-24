@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MapPin, Search, User, LogOut, ShoppingBag } from 'lucide-react';
+import { MapPin, Search, User, LogOut, ShoppingBag, Store } from 'lucide-react';
 import { Link, useLocation } from 'wouter';
 import SearchOverlay from './SearchOverlay';
 import LocationModal from './location/LocationModal';
@@ -29,7 +29,7 @@ const Header = ({ location = "Bangalore, 560001" }: HeaderProps) => {
     city: "Bangalore",
     pincode: "560001"
   });
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isRetailer, logout } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation();
 
@@ -118,6 +118,14 @@ const Header = ({ location = "Bangalore, 560001" }: HeaderProps) => {
                     >
                       <ShoppingBag className="mr-2 h-4 w-4" />
                       <span>Orders</span>
+                    </DropdownMenuItem>
+                    
+                    <DropdownMenuItem 
+                      onClick={() => navigate('/retailer')}
+                      className="cursor-pointer"
+                    >
+                      <Store className="mr-2 h-4 w-4" />
+                      <span>{isRetailer ? 'Retailer Dashboard' : 'Business Portal'}</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 

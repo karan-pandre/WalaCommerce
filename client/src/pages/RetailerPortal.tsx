@@ -35,7 +35,7 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Product, CartItem } from '@shared/schema';
+import { Product, CartItem, Category } from '@shared/schema';
 
 // Component for business verification form
 const BusinessVerificationForm = () => {
@@ -380,12 +380,12 @@ const BulkOrder = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   
   // Fetch categories
-  const { data: categories, isLoading: loadingCategories } = useQuery({
+  const { data: categories = [], isLoading: loadingCategories } = useQuery<Category[]>({
     queryKey: ['/api/categories'],
   });
   
   // Fetch products by category
-  const { data: products, isLoading: loadingProducts } = useQuery({
+  const { data: products = [], isLoading: loadingProducts } = useQuery<Product[]>({
     queryKey: ['/api/products', selectedCategory && `categoryId=${selectedCategory}`],
     enabled: selectedCategory !== null,
   });
@@ -434,7 +434,7 @@ const BulkOrder = () => {
                         <Loader2 className="h-4 w-4 animate-spin" />
                       </div>
                     ) : (
-                      categories?.map((category: any) => (
+                      categories.map((category: Category) => (
                         <SelectItem key={category.id} value={category.id.toString()}>
                           {category.name}
                         </SelectItem>
