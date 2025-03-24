@@ -52,11 +52,14 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }: AuthModalProps) =>
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden" aria-describedby="auth-description">
         <div className="p-6">
           <DialogTitle className="text-2xl font-bold text-center mb-2">
             {activeTab === 'login' ? 'Welcome Back' : 'Create an Account'}
           </DialogTitle>
+          <p id="auth-description" className="sr-only">
+            {activeTab === 'login' ? 'Sign in to your account' : 'Create a new account'}
+          </p>
           
           <Tabs 
             value={activeTab} 

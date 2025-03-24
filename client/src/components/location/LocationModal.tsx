@@ -85,11 +85,11 @@ const LocationModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden max-h-[90vh] overflow-y-auto" aria-describedby="location-description">
         <DialogTitle className="px-6 pt-6">
           Set Delivery Location
         </DialogTitle>
-        <DialogDescription className="px-6">
+        <DialogDescription className="px-6" id="location-description">
           Enter your delivery address or use current location
         </DialogDescription>
 

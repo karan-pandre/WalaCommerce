@@ -125,7 +125,7 @@ const Header = ({ location = "Bangalore, 560001" }: HeaderProps) => {
                       className="cursor-pointer"
                     >
                       <Store className="mr-2 h-4 w-4" />
-                      <span>{isRetailer ? 'Retailer Dashboard' : 'Business Portal'}</span>
+                      <span>Business Portal</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem 
