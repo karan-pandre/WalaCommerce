@@ -12,6 +12,7 @@ import OrderTracking from "@/pages/OrderTracking";
 import UserAccount from "@/pages/UserAccount";
 import SearchPage from "@/pages/SearchPage";
 import OrdersPage from "@/pages/OrdersPage";
+import RetailerPortal from "@/pages/RetailerPortal";
 import { CartProvider } from "./context/CartContext";
 import { AuthProvider } from "./context/AuthContext";
 

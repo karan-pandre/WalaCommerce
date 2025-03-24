@@ -4,10 +4,12 @@ import { User } from '@shared/schema';
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  isRetailer: boolean;
   login: (username: string, password: string) => Promise<boolean>;
   signup: (userData: any) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  registerAsRetailer: (retailerData: any) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,12 +18,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isRetailer, setIsRetailer] = useState(false);
 
   // Check for existing login on component mount
   useEffect(() => {
     const checkAuth = async () => {
       const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
       const username = localStorage.getItem('username');
+      const userRole = localStorage.getItem('userRole') || 'customer';
       
       if (isLoggedIn && username) {
         // In a real app, we would validate the token with the backend
@@ -37,9 +41,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           phone: '+91 9876543210',
           address: '201, Maple Heights, MG Road',
           city: 'Bangalore',
-          pincode: '560001'
+          pincode: '560001',
+          role: userRole
         });
         setIsAuthenticated(true);
+        setIsRetailer(userRole === 'retailer');
       }
       
       setIsLoading(false);
@@ -47,6 +53,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     checkAuth();
   }, []);
+  
+  // Update isRetailer whenever user changes
+  useEffect(() => {
+    if (user) {
+      setIsRetailer(user.role === 'retailer');
+    } else {
+      setIsRetailer(false);
+    }
+  }, [user?.role]);
 
   // Sign in a user
   const login = async (username: string, password: string) => {
@@ -75,7 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         phone: '+91 9876543210',
         address: '201, Maple Heights, MG Road',
         city: 'Bangalore',
-        pincode: '560001'
+        pincode: '560001',
+        role: 'customer'
       };
       
       setUser(userData);
@@ -118,7 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         phone: userData.phone,
         address: null,
         city: null,
-        pincode: null
+        pincode: null,
+        role: 'customer'
       };
       
       setUser(newUserData);
@@ -138,17 +155,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
+    setIsRetailer(false);
     localStorage.removeItem('isLoggedIn');
     localStorage.removeItem('username');
+    localStorage.removeItem('userRole');
+  };
+  
+  // Register as a retailer
+  const registerAsRetailer = async (retailerData: any) => {
+    setIsLoading(true);
+    
+    try {
+      // In a real app, we would make an API call to register the retailer
+      // const response = await fetch('/api/retailers/register', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ ...retailerData, userId: user?.id }),
+      // });
+      
+      // if (!response.ok) throw new Error('Retailer registration failed');
+      // const retailerResponse = await response.json();
+      
+      // For demo, we'll simulate a successful retailer registration
+      await new Promise(resolve => setTimeout(resolve, 1200)); // Simulate API delay
+      
+      if (!user) throw new Error('User must be logged in to register as retailer');
+      
+      const updatedUser = {
+        ...user,
+        role: 'retailer'
+      };
+      
+      setUser(updatedUser);
+      setIsRetailer(true);
+      localStorage.setItem('userRole', 'retailer');
+      
+      setIsLoading(false);
+      return true;
+    } catch (error) {
+      console.error('Retailer registration error:', error);
+      setIsLoading(false);
+      return false;
+    }
   };
 
   const value = {
     user,
     isAuthenticated,
+    isRetailer,
     login,
     signup,
     logout,
-    isLoading
+    isLoading,
+    registerAsRetailer
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
