@@ -1,16 +1,15 @@
 import { useState } from 'react';
-import { useLocation } from 'wouter';
 import { X } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-  DialogDescription,
   DialogClose,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import LoginForm from './LoginForm';
 import SignupForm from './SignupForm';
+import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthModalProps {
@@ -21,51 +20,84 @@ interface AuthModalProps {
 
 const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }: AuthModalProps) => {
   const [activeTab, setActiveTab] = useState<'login' | 'signup'>(defaultTab);
+  const { login, signup } = useAuth();
   const { toast } = useToast();
-  const [, navigate] = useLocation();
 
-  const handleSuccessfulAuth = (username: string, isLogin: boolean) => {
-    // In a real app, we would store the auth token/user info in local storage or context
-    localStorage.setItem('isLoggedIn', 'true');
-    localStorage.setItem('username', username);
+  const handleLoginSuccess = async (username: string) => {
+    const success = await login(username, 'password'); // In a real app, this would come from the form
     
-    onClose();
-    
-    toast({
-      title: isLogin ? 'Welcome back!' : 'Account created!',
-      description: isLogin 
-        ? `You've successfully logged in as ${username}` 
-        : `Your new account has been created. Welcome to Wala!`,
-      duration: 3000,
+    if (success) {
+      toast({
+        title: 'Welcome back!',
+        description: `You've successfully logged in.`,
+      });
+      onClose();
+    }
+  };
+
+  const handleSignupSuccess = async (username: string) => {
+    const success = await signup({
+      username,
+      // Other fields would come from the form in a real app
     });
     
-    // Refresh the page to update auth state across the app
-    window.location.reload();
+    if (success) {
+      toast({
+        title: 'Account created!',
+        description: 'Your account has been successfully created.',
+      });
+      onClose();
+    }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md p-0 overflow-hidden">
-        <DialogTitle className="px-6 pt-6">
-          {activeTab === 'login' ? 'Sign In to Your Account' : 'Create an Account'}
-        </DialogTitle>
-        <DialogDescription className="px-6">
-          {activeTab === 'login' 
-            ? 'Enter your credentials to access your account' 
-            : 'Fill in your details to create a new account'}
-        </DialogDescription>
-
-        <div className="pt-4">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'login' | 'signup')}>
-            <TabsList className="grid grid-cols-2 w-full">
+        <div className="p-6">
+          <DialogTitle className="text-2xl font-bold text-center mb-2">
+            {activeTab === 'login' ? 'Welcome Back' : 'Create an Account'}
+          </DialogTitle>
+          
+          <Tabs 
+            value={activeTab} 
+            onValueChange={(value) => setActiveTab(value as 'login' | 'signup')}
+            className="mt-6"
+          >
+            <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">Sign In</TabsTrigger>
               <TabsTrigger value="signup">Sign Up</TabsTrigger>
             </TabsList>
-            <TabsContent value="login" className="px-6 pb-6">
-              <LoginForm onSuccess={(username) => handleSuccessfulAuth(username, true)} />
+            
+            <TabsContent value="login" className="mt-0">
+              <LoginForm onSuccess={handleLoginSuccess} />
+              
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-500">
+                  Don't have an account?{' '}
+                  <button 
+                    className="text-primary hover:underline font-medium"
+                    onClick={() => setActiveTab('signup')}
+                  >
+                    Sign up
+                  </button>
+                </p>
+              </div>
             </TabsContent>
-            <TabsContent value="signup" className="px-6 pb-6">
-              <SignupForm onSuccess={(username) => handleSuccessfulAuth(username, false)} />
+            
+            <TabsContent value="signup" className="mt-0">
+              <SignupForm onSuccess={handleSignupSuccess} />
+              
+              <div className="mt-6 text-center">
+                <p className="text-sm text-gray-500">
+                  Already have an account?{' '}
+                  <button 
+                    className="text-primary hover:underline font-medium"
+                    onClick={() => setActiveTab('login')}
+                  >
+                    Sign in
+                  </button>
+                </p>
+              </div>
             </TabsContent>
           </Tabs>
         </div>

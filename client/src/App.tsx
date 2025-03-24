@@ -13,6 +13,7 @@ import UserAccount from "@/pages/UserAccount";
 import SearchPage from "@/pages/SearchPage";
 import OrdersPage from "@/pages/OrdersPage";
 import { CartProvider } from "./context/CartContext";
+import { AuthProvider } from "./context/AuthContext";
 
 function Router() {
   return (
@@ -34,10 +35,12 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <Router />
-        <Toaster />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <Router />
+          <Toaster />
+        </CartProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

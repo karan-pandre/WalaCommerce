@@ -1,7 +1,20 @@
 import { useState } from 'react';
-import { MapPin, Search, User } from 'lucide-react';
-import { Link } from 'wouter';
+import { MapPin, Search, User, LogOut, ShoppingBag } from 'lucide-react';
+import { Link, useLocation } from 'wouter';
 import SearchOverlay from './SearchOverlay';
+import LocationModal from './location/LocationModal';
+import AuthModal from './auth/AuthModal';
+import { useAuth } from '@/context/AuthContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 interface HeaderProps {
   location?: string;
@@ -9,16 +22,48 @@ interface HeaderProps {
 
 const Header = ({ location = "Bangalore, 560001" }: HeaderProps) => {
   const [showSearch, setShowSearch] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState({
+    address: "Bangalore",
+    city: "Bangalore",
+    pincode: "560001"
+  });
+  const { user, isAuthenticated, logout } = useAuth();
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  const handleLocationSelect = (location: { address: string; city: string; pincode: string }) => {
+    setCurrentLocation(location);
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: "Logged out",
+      description: "You have been successfully logged out.",
+    });
+  };
 
   return (
     <>
       <header className="sticky top-0 z-50 bg-white shadow-sm">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button id="location-btn" className="flex items-center text-sm font-medium">
+            <Link href="/">
+              <div className="flex items-center cursor-pointer">
+                <span className="font-bold text-xl text-primary mr-2">Wala</span>
+              </div>
+            </Link>
+            
+            <div className="flex items-center gap-3 ml-4">
+              <button 
+                id="location-btn" 
+                className="flex items-center text-sm font-medium"
+                onClick={() => setShowLocationModal(true)}
+              >
                 <MapPin className="text-primary mr-1 h-4 w-4" />
-                <span>{location}</span>
+                <span>{currentLocation.address}, {currentLocation.pincode}</span>
                 <svg className="ml-1 h-4 w-4" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M6 9L12 15L18 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -37,18 +82,80 @@ const Header = ({ location = "Bangalore, 560001" }: HeaderProps) => {
               </div>
             </div>
             
-            <div>
-              <Link href="/account">
-                <button id="user-btn" className="p-2 relative">
-                  <User className="h-5 w-5" />
-                </button>
+            <div className="flex items-center space-x-3">
+              <Link href="/orders">
+                <div className="p-2 relative cursor-pointer">
+                  <ShoppingBag className="h-5 w-5" />
+                </div>
               </Link>
+              
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src="" alt={user?.name} />
+                        <AvatarFallback>{user?.name?.charAt(0) || 'U'}</AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end" forceMount>
+                    <div className="flex flex-col space-y-1 p-2">
+                      <p className="text-sm font-medium">{user?.name}</p>
+                      <p className="text-xs text-muted-foreground">{user?.email}</p>
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={() => navigate('/account')}
+                      className="cursor-pointer"
+                    >
+                      <User className="mr-2 h-4 w-4" />
+                      <span>Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => navigate('/orders')}
+                      className="cursor-pointer"
+                    >
+                      <ShoppingBag className="mr-2 h-4 w-4" />
+                      <span>Orders</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="cursor-pointer"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Log out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setShowAuthModal(true)}
+                  className="flex items-center gap-1"
+                >
+                  <User className="h-4 w-4 mr-1" />
+                  Sign In
+                </Button>
+              )}
             </div>
           </div>
         </div>
       </header>
 
       <SearchOverlay isOpen={showSearch} onClose={() => setShowSearch(false)} />
+      <LocationModal 
+        isOpen={showLocationModal} 
+        onClose={() => setShowLocationModal(false)} 
+        onSelectLocation={handleLocationSelect}
+        currentLocation={currentLocation}
+      />
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
     </>
   );
 };
