@@ -48,19 +48,15 @@ const LoginForm = ({ onSuccess }: LoginFormProps) => {
     setIsLoading(true);
     
     try {
-      // In a real app, this would be an actual API call
-      // const response = await apiRequest('POST', '/api/auth/login', {
-      //   username: data.username,
-      //   password: data.password
-      // });
-      // const user = await response.json();
-      
-      // For demo, we'll simulate a successful login
-      // Simulate API delay
+      // Hardcoded successful login for demo
       await new Promise(resolve => setTimeout(resolve, 800));
-      
-      // Demo validation - accept any valid form
       onSuccess(data.username);
+      
+      // Show success toast
+      toast({
+        title: 'Login successful',
+        description: 'You have been successfully logged in.',
+      });
     } catch (error) {
       toast({
         title: 'Login failed',
