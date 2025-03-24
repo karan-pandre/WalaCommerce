@@ -24,6 +24,7 @@ const Header = ({ location = "Bangalore, 560001" }: HeaderProps) => {
   const [showSearch, setShowSearch] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [defaultAuthTab, setDefaultAuthTab] = useState<'login' | 'signup' | 'retailer'>('login');
   const [currentLocation, setCurrentLocation] = useState({
     address: "Bangalore",
     city: "Bangalore",
@@ -138,15 +139,35 @@ const Header = ({ location = "Bangalore, 560001" }: HeaderProps) => {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => setShowAuthModal(true)}
-                  className="flex items-center gap-1"
-                >
-                  <User className="h-4 w-4 mr-1" />
-                  Sign In
-                </Button>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setShowAuthModal(true);
+                      // Set the default tab to retailer login
+                      setDefaultAuthTab('retailer');
+                    }}
+                    className="flex items-center gap-1 bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
+                  >
+                    <Store className="h-4 w-4 mr-1" />
+                    Business Login
+                  </Button>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setShowAuthModal(true);
+                      // Set the default tab to regular login
+                      setDefaultAuthTab('login');
+                    }}
+                    className="flex items-center gap-1"
+                  >
+                    <User className="h-4 w-4 mr-1" />
+                    Sign In
+                  </Button>
+                </div>
               )}
             </div>
           </div>
@@ -162,7 +183,8 @@ const Header = ({ location = "Bangalore, 560001" }: HeaderProps) => {
       />
       <AuthModal 
         isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+        onClose={() => setShowAuthModal(false)}
+        defaultTab={defaultAuthTab}
       />
     </>
   );

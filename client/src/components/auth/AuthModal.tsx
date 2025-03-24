@@ -36,9 +36,11 @@ const AuthModal = ({ isOpen, onClose, defaultTab = 'login' }: AuthModalProps) =>
       });
       onClose();
       
-      // Redirect to retailer portal if logging in as a retailer
+      // Redirect to appropriate page based on login type
       if (activeTab === 'retailer') {
         setLocation('/retailer');
+      } else {
+        setLocation('/');
       }
     }
   };
