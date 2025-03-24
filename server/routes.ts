@@ -7,7 +7,10 @@ import {
   cartItemSchema,
   orderItemSchema,
   insertProductSchema,
-  insertCategorySchema
+  insertCategorySchema,
+  insertRetailerSchema,
+  insertRetailerOrderSchema,
+  verificationDocumentSchema,
 } from "@shared/schema";
 import { z } from "zod";
 
@@ -342,6 +345,306 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid status data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  // Retailer routes
+  app.post(`${apiRouter}/retailers/register`, async (req, res) => {
+    try {
+      // Verify the user exists first
+      const userId = parseInt(req.body.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check if retailer account already exists for this user
+      const existingRetailer = await storage.getRetailerByUserId(userId);
+      if (existingRetailer) {
+        return res.status(409).json({ message: "Retailer account already exists for this user" });
+      }
+
+      // Create the retailer account
+      const retailerData = insertRetailerSchema.parse(req.body);
+      const retailer = await storage.createRetailer(retailerData);
+
+      // Update the user's role
+      await storage.updateUser(userId, { role: "retailer" });
+
+      res.status(201).json(retailer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid retailer data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to register retailer" });
+    }
+  });
+
+  app.get(`${apiRouter}/retailers/:id`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid retailer ID" });
+      }
+      
+      const retailer = await storage.getRetailer(id);
+      if (!retailer) {
+        return res.status(404).json({ message: "Retailer not found" });
+      }
+      
+      res.json(retailer);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch retailer" });
+    }
+  });
+
+  app.get(`${apiRouter}/users/:userId/retailer`, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+      
+      const retailer = await storage.getRetailerByUserId(userId);
+      if (!retailer) {
+        return res.status(404).json({ message: "Retailer account not found for this user" });
+      }
+      
+      res.json(retailer);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch retailer" });
+    }
+  });
+
+  app.patch(`${apiRouter}/retailers/:id`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid retailer ID" });
+      }
+      
+      const updateRetailerSchema = insertRetailerSchema.partial();
+      const retailerData = updateRetailerSchema.parse(req.body);
+      
+      const updatedRetailer = await storage.updateRetailer(id, retailerData);
+      if (!updatedRetailer) {
+        return res.status(404).json({ message: "Retailer not found" });
+      }
+      
+      res.json(updatedRetailer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid retailer data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update retailer" });
+    }
+  });
+
+  app.post(`${apiRouter}/retailers/:id/documents`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid retailer ID" });
+      }
+      
+      const documentData = verificationDocumentSchema.parse(req.body);
+      
+      const retailer = await storage.addVerificationDocument(id, documentData);
+      if (!retailer) {
+        return res.status(404).json({ message: "Retailer not found" });
+      }
+      
+      res.status(201).json(retailer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid document data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to add verification document" });
+    }
+  });
+
+  app.patch(`${apiRouter}/retailers/:id/verification`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid retailer ID" });
+      }
+      
+      const statusSchema = z.object({
+        status: z.enum(["pending", "verified", "rejected"])
+      });
+      
+      const { status } = statusSchema.parse(req.body);
+      
+      const updatedRetailer = await storage.updateRetailerVerificationStatus(id, status);
+      if (!updatedRetailer) {
+        return res.status(404).json({ message: "Retailer not found" });
+      }
+      
+      res.json(updatedRetailer);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid status data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update verification status" });
+    }
+  });
+
+  app.get(`${apiRouter}/retailers/pending`, async (req, res) => {
+    try {
+      const retailers = await storage.getPendingVerificationRetailers();
+      res.json(retailers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch pending retailers" });
+    }
+  });
+
+  app.get(`${apiRouter}/retailers/verified`, async (req, res) => {
+    try {
+      const retailers = await storage.getVerifiedRetailers();
+      res.json(retailers);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch verified retailers" });
+    }
+  });
+
+  // Retailer Orders
+  app.post(`${apiRouter}/retailer-orders`, async (req, res) => {
+    try {
+      const orderData = insertRetailerOrderSchema.parse(req.body);
+      
+      // Validate items
+      const itemsSchema = z.array(orderItemSchema);
+      itemsSchema.parse(orderData.items);
+      
+      // Verify retailer exists and is verified
+      const retailer = await storage.getRetailer(orderData.retailerId);
+      if (!retailer) {
+        return res.status(404).json({ message: "Retailer not found" });
+      }
+      
+      if (retailer.verificationStatus !== "verified") {
+        return res.status(403).json({ 
+          message: "Retailer account is not verified. Current status: " + retailer.verificationStatus 
+        });
+      }
+      
+      // Check for product stock
+      for (const item of orderData.items) {
+        const product = await storage.getProductById(item.productId);
+        if (!product) {
+          return res.status(400).json({ 
+            message: `Product with id ${item.productId} not found` 
+          });
+        }
+        
+        if (product.stock < item.quantity) {
+          return res.status(400).json({ 
+            message: `Not enough stock for ${product.name}. Available: ${product.stock}` 
+          });
+        }
+        
+        // Update the stock
+        await storage.updateProductStock(product.id, product.stock - item.quantity);
+      }
+      
+      const order = await storage.createRetailerOrder(orderData);
+      res.status(201).json(order);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid order data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create retailer order" });
+    }
+  });
+
+  app.get(`${apiRouter}/retailer-orders/:id`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+      
+      const order = await storage.getRetailerOrderById(id);
+      if (!order) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(order);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch retailer order" });
+    }
+  });
+
+  app.get(`${apiRouter}/retailers/:retailerId/orders`, async (req, res) => {
+    try {
+      const retailerId = parseInt(req.params.retailerId);
+      if (isNaN(retailerId)) {
+        return res.status(400).json({ message: "Invalid retailer ID" });
+      }
+      
+      const orders = await storage.getRetailerOrdersByRetailerId(retailerId);
+      res.json(orders);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch retailer orders" });
+    }
+  });
+
+  app.patch(`${apiRouter}/retailer-orders/:id/status`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+      
+      const statusSchema = z.object({
+        status: z.enum(["pending", "processing", "shipped", "delivered", "cancelled"])
+      });
+      
+      const { status } = statusSchema.parse(req.body);
+      
+      const updatedOrder = await storage.updateRetailerOrderStatus(id, status);
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid status data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update order status" });
+    }
+  });
+
+  app.patch(`${apiRouter}/retailer-orders/:id/payment-status`, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid order ID" });
+      }
+      
+      const statusSchema = z.object({
+        status: z.enum(["pending", "paid", "failed", "refunded", "partial"])
+      });
+      
+      const { status } = statusSchema.parse(req.body);
+      
+      const updatedOrder = await storage.updateRetailerOrderPaymentStatus(id, status);
+      if (!updatedOrder) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      
+      res.json(updatedOrder);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid status data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to update payment status" });
     }
   });
 

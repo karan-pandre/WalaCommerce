@@ -3,7 +3,10 @@ import {
   Category, InsertCategory, 
   Product, InsertProduct,
   Order, InsertOrder,
-  users, categories, products, orders
+  Retailer, InsertRetailer,
+  RetailerOrder, InsertRetailerOrder,
+  VerificationDocument,
+  users, categories, products, orders, retailers, retailerOrders
 } from "@shared/schema";
 
 export interface IStorage {
@@ -12,6 +15,16 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined>;
+
+  // Retailer methods
+  getRetailer(id: number): Promise<Retailer | undefined>;
+  getRetailerByUserId(userId: number): Promise<Retailer | undefined>;
+  createRetailer(retailer: InsertRetailer): Promise<Retailer>;
+  updateRetailer(id: number, retailerData: Partial<InsertRetailer>): Promise<Retailer | undefined>;
+  updateRetailerVerificationStatus(id: number, status: string): Promise<Retailer | undefined>;
+  getPendingVerificationRetailers(): Promise<Retailer[]>;
+  getVerifiedRetailers(): Promise<Retailer[]>;
+  addVerificationDocument(retailerId: number, document: VerificationDocument): Promise<Retailer | undefined>;
 
   // Category methods
   getCategories(): Promise<Category[]>;
@@ -33,32 +46,161 @@ export interface IStorage {
   getOrderById(id: number): Promise<Order | undefined>;
   getOrdersByUserId(userId: number): Promise<Order[]>;
   updateOrderStatus(id: number, status: string): Promise<Order | undefined>;
+  
+  // Retailer Order methods
+  createRetailerOrder(order: InsertRetailerOrder): Promise<RetailerOrder>;
+  getRetailerOrderById(id: number): Promise<RetailerOrder | undefined>;
+  getRetailerOrdersByRetailerId(retailerId: number): Promise<RetailerOrder[]>;
+  updateRetailerOrderStatus(id: number, status: string): Promise<RetailerOrder | undefined>;
+  updateRetailerOrderPaymentStatus(id: number, status: string): Promise<RetailerOrder | undefined>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
+  private retailers: Map<number, Retailer>;
   private categories: Map<number, Category>;
   private products: Map<number, Product>;
   private orders: Map<number, Order>;
+  private retailerOrders: Map<number, RetailerOrder>;
 
   private userId: number;
+  private retailerId: number;
   private categoryId: number;
   private productId: number;
   private orderId: number;
+  private retailerOrderId: number;
 
   constructor() {
     this.users = new Map();
+    this.retailers = new Map();
     this.categories = new Map();
     this.products = new Map();
     this.orders = new Map();
+    this.retailerOrders = new Map();
 
     this.userId = 1;
+    this.retailerId = 1;
     this.categoryId = 1;
     this.productId = 1;
     this.orderId = 1;
+    this.retailerOrderId = 1;
 
     // Seed initial data
     this.seedData();
+  }
+  
+  // Retailer methods
+  async getRetailer(id: number): Promise<Retailer | undefined> {
+    return this.retailers.get(id);
+  }
+
+  async getRetailerByUserId(userId: number): Promise<Retailer | undefined> {
+    return Array.from(this.retailers.values()).find(
+      (retailer) => retailer.userId === userId
+    );
+  }
+
+  async createRetailer(insertRetailer: InsertRetailer): Promise<Retailer> {
+    const id = this.retailerId++;
+    const retailer: Retailer = { 
+      ...insertRetailer, 
+      id, 
+      verificationStatus: "pending", 
+      registrationDate: new Date(),
+      verificationDocuments: insertRetailer.verificationDocuments || []
+    };
+    this.retailers.set(id, retailer);
+    return retailer;
+  }
+
+  async updateRetailer(id: number, retailerData: Partial<InsertRetailer>): Promise<Retailer | undefined> {
+    const retailer = await this.getRetailer(id);
+    if (!retailer) return undefined;
+
+    const updatedRetailer = { ...retailer, ...retailerData };
+    this.retailers.set(id, updatedRetailer);
+    return updatedRetailer;
+  }
+
+  async updateRetailerVerificationStatus(id: number, status: string): Promise<Retailer | undefined> {
+    const retailer = await this.getRetailer(id);
+    if (!retailer) return undefined;
+
+    const updatedRetailer = { ...retailer, verificationStatus: status };
+    this.retailers.set(id, updatedRetailer);
+    return updatedRetailer;
+  }
+
+  async getPendingVerificationRetailers(): Promise<Retailer[]> {
+    return Array.from(this.retailers.values()).filter(
+      (retailer) => retailer.verificationStatus === "pending"
+    );
+  }
+
+  async getVerifiedRetailers(): Promise<Retailer[]> {
+    return Array.from(this.retailers.values()).filter(
+      (retailer) => retailer.verificationStatus === "verified"
+    );
+  }
+
+  async addVerificationDocument(retailerId: number, document: VerificationDocument): Promise<Retailer | undefined> {
+    const retailer = await this.getRetailer(retailerId);
+    if (!retailer) return undefined;
+
+    const documents = Array.isArray(retailer.verificationDocuments) 
+      ? [...retailer.verificationDocuments, document] 
+      : [document];
+
+    const updatedRetailer = { 
+      ...retailer, 
+      verificationDocuments: documents
+    };
+    
+    this.retailers.set(retailerId, updatedRetailer);
+    return updatedRetailer;
+  }
+  
+  // Retailer Order methods
+  async createRetailerOrder(insertOrder: InsertRetailerOrder): Promise<RetailerOrder> {
+    const id = this.retailerOrderId++;
+    const orderDate = new Date();
+    const order: RetailerOrder = { 
+      ...insertOrder, 
+      id, 
+      orderDate, 
+      status: insertOrder.status || "pending",
+      paymentStatus: insertOrder.paymentStatus || "pending"
+    };
+    this.retailerOrders.set(id, order);
+    return order;
+  }
+
+  async getRetailerOrderById(id: number): Promise<RetailerOrder | undefined> {
+    return this.retailerOrders.get(id);
+  }
+
+  async getRetailerOrdersByRetailerId(retailerId: number): Promise<RetailerOrder[]> {
+    return Array.from(this.retailerOrders.values()).filter(
+      (order) => order.retailerId === retailerId
+    );
+  }
+
+  async updateRetailerOrderStatus(id: number, status: string): Promise<RetailerOrder | undefined> {
+    const order = await this.getRetailerOrderById(id);
+    if (!order) return undefined;
+
+    const updatedOrder = { ...order, status };
+    this.retailerOrders.set(id, updatedOrder);
+    return updatedOrder;
+  }
+
+  async updateRetailerOrderPaymentStatus(id: number, status: string): Promise<RetailerOrder | undefined> {
+    const order = await this.getRetailerOrderById(id);
+    if (!order) return undefined;
+
+    const updatedOrder = { ...order, paymentStatus: status };
+    this.retailerOrders.set(id, updatedOrder);
+    return updatedOrder;
   }
 
   // User methods
