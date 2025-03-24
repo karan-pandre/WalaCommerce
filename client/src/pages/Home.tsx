@@ -9,12 +9,12 @@ import { Product } from '@shared/schema';
 
 const Home = () => {
   // Fetch popular products
-  const { data: popularProducts, isLoading: loadingPopular } = useQuery({
+  const { data: popularProducts, isLoading: loadingPopular } = useQuery<Product[]>({
     queryKey: ['/api/products/popular'],
   });
 
   // Fetch new arrivals
-  const { data: newProducts, isLoading: loadingNew } = useQuery({
+  const { data: newProducts, isLoading: loadingNew } = useQuery<Product[]>({
     queryKey: ['/api/products/new'],
   });
 
@@ -68,7 +68,7 @@ const Home = () => {
           <div className="px-4 mb-3 flex justify-between items-center">
             <h2 className="text-lg font-semibold font-sans">Today's Deals</h2>
             <Link href="/deals">
-              <a className="text-sm text-accent">View All</a>
+              <div className="text-sm text-accent cursor-pointer">View All</div>
             </Link>
           </div>
           <div className="horizontal-scroll flex overflow-x-auto px-4 gap-3 pb-2">
@@ -150,9 +150,11 @@ const Home = () => {
               )) : 
               
               // Product cards
-              popularProducts?.map((product: Product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+              popularProducts && popularProducts.length > 0 
+                ? popularProducts.map((product: Product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))
+                : <div className="col-span-2 md:col-span-4 text-center py-8 text-gray-500">No popular products found</div>}
           </div>
         </section>
 
@@ -161,7 +163,7 @@ const Home = () => {
           <div className="px-4 mb-3 flex justify-between items-center">
             <h2 className="text-lg font-semibold font-sans">Recently Added</h2>
             <Link href="/new-arrivals">
-              <a className="text-sm text-accent">View All</a>
+              <div className="text-sm text-accent cursor-pointer">View All</div>
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 px-4">
@@ -182,9 +184,11 @@ const Home = () => {
               )) : 
               
               // Product cards
-              newProducts?.map((product: Product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+              newProducts && newProducts.length > 0 
+                ? newProducts.map((product: Product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))
+                : <div className="col-span-2 md:col-span-4 text-center py-8 text-gray-500">No new products found</div>}
           </div>
         </section>
       </main>
